@@ -1,0 +1,127 @@
+USE supply_chain;
+
+CREATE TABLE supply_chain_data (
+    Warehouse_ID VARCHAR(50),
+    Location VARCHAR(100),
+    Current_Stock INT,
+    Demand_Forecast INT,
+    Lead_Time_Days INT,
+    Shipping_Time_Days INT,
+    Stockout_Risk INT,
+    Operational_Cost INT,
+    Supplier_ID VARCHAR(50),
+    Product_Category VARCHAR(100),
+    Monthly_Sales INT,
+    Order_Processing_Time INT,
+    Return_Rate FLOAT,
+    Customer_Rating FLOAT,
+    Warehouse_Capacity INT,
+    Storage_Cost INT,
+    Transportation_Cost INT,
+    Backorder_Quantity INT,
+    Damaged_Goods INT,
+    Employee_Count INT
+);
+
+-- Imported dataset using Table Import Wizard
+
+-- OBJECTIVE 1: MINIMIZE DELIVERY DELAYS
+
+-- Identify warehouses with highest shipping delays
+SELECT Warehouse_ID, Location,
+       AVG(Shipping_Time_Days) AS Avg_Shipping_Time
+FROM supply_chain_data
+GROUP BY Warehouse_ID, Location
+ORDER BY Avg_Shipping_Time DESC;
+
+-- Supplier-wise shipping performance
+SELECT Supplier_ID,
+       AVG(Shipping_Time_Days) AS Avg_Shipping_Time,
+       COUNT(*) AS Total_Orders
+FROM supply_chain_data
+GROUP BY Supplier_ID
+ORDER BY Avg_Shipping_Time DESC;
+
+-- Product categories causing slower shipments
+SELECT Product_Category,
+       AVG(Shipping_Time_Days) AS Avg_Shipping_Time
+FROM supply_chain_data
+GROUP BY Product_Category
+ORDER BY Avg_Shipping_Time DESC;
+
+
+-- OBJECTIVE 2: ENHANCE INVENTORY MANAGEMENT
+
+-- Identify shortage (low stock, high demand)
+SELECT Warehouse_ID, Product_Category, Current_Stock, Demand_Forecast
+FROM supply_chain_data
+WHERE Current_Stock < Demand_Forecast
+ORDER BY (Demand_Forecast - Current_Stock) DESC;
+
+-- Identify excess inventory
+SELECT Warehouse_ID, Product_Category, Current_Stock, Monthly_Sales
+FROM supply_chain_data
+WHERE Current_Stock > (Monthly_Sales * 2)
+ORDER BY Current_Stock DESC;
+
+-- Warehouse capacity utilization
+SELECT Warehouse_ID,
+       SUM(Current_Stock) AS Total_Stock,
+       AVG(Warehouse_Capacity) AS Capacity,
+       ROUND((SUM(Current_Stock) / AVG(Warehouse_Capacity)) * 100, 2) AS Utilization_Percentage
+FROM supply_chain_data
+GROUP BY Warehouse_ID
+ORDER BY Utilization_Percentage DESC;
+
+
+-- OBJECTIVE 3: DEMAND FLUCTUATION & FORECAST SUPPORT
+
+-- Compare Monthly Sales vs Forecast
+SELECT Warehouse_ID, Product_Category,
+       Monthly_Sales, Demand_Forecast,
+       (Demand_Forecast - Monthly_Sales) AS Forecast_Error
+FROM supply_chain_data
+ORDER BY ABS(Forecast_Error) DESC;
+
+-- Category-wise demand pattern
+SELECT Product_Category,
+       SUM(Monthly_Sales) AS Total_Sales,
+       SUM(Demand_Forecast) AS Total_Forecast
+FROM supply_chain_data
+GROUP BY Product_Category
+ORDER BY Total_Sales DESC;
+
+
+-- OBJECTIVE 4: MAXIMIZE PROFIT MARGINS
+
+-- Compute profit margin proxy
+SELECT Warehouse_ID, Product_Category,
+       Monthly_Sales,
+       (Operational_Cost + Storage_Cost + Transportation_Cost) AS Total_Cost,
+       (Monthly_Sales - (Operational_Cost + Storage_Cost + Transportation_Cost)) AS Profit_Proxy
+FROM supply_chain_data
+ORDER BY Profit_Proxy DESC;
+
+-- Best performing product categories
+SELECT Product_Category,
+       SUM(Monthly_Sales) AS Total_Sales,
+       SUM(Operational_Cost + Storage_Cost + Transportation_Cost) AS Total_Cost,
+       SUM(Monthly_Sales - (Operational_Cost + Storage_Cost + Transportation_Cost)) AS Profit_Proxy
+FROM supply_chain_data
+GROUP BY Product_Category
+ORDER BY Profit_Proxy DESC;
+
+-- Most profitable locations
+SELECT Location,
+       SUM(Monthly_Sales) AS Total_Sales,
+       SUM(Operational_Cost + Storage_Cost + Transportation_Cost) AS Total_Cost,
+       SUM(Monthly_Sales - (Operational_Cost + Storage_Cost + Transportation_Cost)) AS Profit_Proxy
+FROM supply_chain_data
+GROUP BY Location
+ORDER BY Profit_Proxy DESC;
+
+
+
+
+
+
