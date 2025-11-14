@@ -1,0 +1,80 @@
+import pandas as pd
+
+# Load dataset
+df = pd.read_csv("/Users/aditi/Documents/Project 2_AT/supply_chain_extended_data (2).csv")
+
+# Quick overview
+print(df.head())
+print(df.info())
+print(df.describe())
+
+
+# OBJECTIVE 1: MINIMIZE DELIVERY DELAYS
+
+# Average shipping time per warehouse
+warehouse_shipping = df.groupby("Warehouse_ID")["Shipping_Time_Days"].mean().reset_index()
+warehouse_shipping = warehouse_shipping.sort_values("Shipping_Time_Days", ascending=False)
+
+print("\nWarehouses with highest shipping delay:")
+print(warehouse_shipping.head(10))
+
+# Shipping delay by product category
+product_shipping = df.groupby("Product_Category")["Shipping_Time_Days"].mean().reset_index()
+product_shipping = product_shipping.sort_values("Shipping_Time_Days", ascending=False)
+
+print("\nProduct categories causing highest shipping delay:")
+print(product_shipping.head(10))
+
+
+# OBJECTIVE 2: ENHANCE INVENTORY MANAGEMENT
+
+# Identify stock shortages (Current Stock < Demand Forecast)
+df["Stock_Status"] = df.apply(
+    lambda x: "Shortage" if x["Current_Stock"] < x["Demand_Forecast"] else "Excess",
+    axis=1
+)
+
+print("\nStock shortage & excess count:")
+print(df["Stock_Status"].value_counts())
+
+# Which warehouses frequently face shortage?
+warehouse_stock = df.groupby("Warehouse_ID")["Stock_Status"].value_counts().unstack().fillna(0)
+
+print("\nWarehouse-wise stock status:")
+print(warehouse_stock)
+
+
+# OBJECTIVE 3: IMPROVE DEMAND FORECASTING (Simple Approach)
+
+df["Forecast_Error"] = df["Demand_Forecast"] - df["Monthly_Sales"]
+
+print("\nLargest Forecast Errors (Companies should review their forecasting):")
+print(df[["Warehouse_ID","Product_Category","Demand_Forecast","Monthly_Sales","Forecast_Error"]]
+      .sort_values("Forecast_Error", ascending=False).head(10))
+
+
+# OBJECTIVE 4: MAXIMIZE PROFIT MARGINS (Simple Profit Proxy)
+
+df["Profit_Proxy"] = df["Monthly_Sales"] - df["Operational_Cost"]
+
+# Best products for profit
+profit_by_product = df.groupby("Product_Category")["Profit_Proxy"].mean().reset_index().sort_values("Profit_Proxy", ascending=False)
+
+print("\nMost profitable product categories:")
+print(profit_by_product.head(10))
+
+# Best warehouse locations for profit
+profit_by_location = df.groupby("Location")["Profit_Proxy"].mean().reset_index().sort_values("Profit_Proxy", ascending=False)
+
+print("\nBest warehouse locations for profit:")
+print(profit_by_location.head(10))
+
+
+# EXPORT RESULTS FOR POWER BI DASHBOARD LATER
+
+warehouse_shipping.to_csv("warehouse_shipping_performance.csv", index=False)
+warehouse_stock.to_csv("warehouse_inventory_status.csv")
+profit_by_product.to_csv("profit_by_product.csv", index=False)
+profit_by_location.to_csv("profit_by_location.csv", index=False)
+
+print("\nFiles exported successfully. Import them later into Power BI.")
